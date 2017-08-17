@@ -1,7 +1,7 @@
 pragma solidity ^0.4.11;
 
 import './Ownable.sol';
-import './ERC20.sol';
+import './StandardToken.sol';
 
 /**
  * @title Mineable Token
@@ -22,9 +22,9 @@ contract MineableToken is Ownable {
 
     /**
      * @dev Constructor that sets the passed value as the token to be mineable.
-     * @param _token ERC20 ERC20 compatible token
+     * @param _token StandardToken ERC20 compatible token
      */
-    function MineableToken(ERC20 _token) {
+    function MineableToken(StandardToken _token) {
         token = _token;
     }
 
@@ -75,7 +75,7 @@ contract MineableToken is Ownable {
      * @param _amount uint256 Amount of tokens being transfered
      */
     function transfer(address _to, uint256 _amount) onlyOwner {
-        token.transferFrom(this, _to, _amount);
+        token.transfer(_to, _amount);
     }
 
     /**
@@ -83,7 +83,7 @@ contract MineableToken is Ownable {
      * @return uint256 Returns the amount to reward
      */
     function calculateReward() returns (uint256 reward) {
-        uint256 totalSupply = getTokenBalance();
+        uint256 totalSupply = token.balanceOf(address(this));
 
         /* Check if we are incrementing reward */
         if (incrementalRewards == true) {
@@ -104,7 +104,7 @@ contract MineableToken is Ownable {
      * @param nonce uint
      * @return uint The amount rewarded
      */
-    function proofOfWork(uint nonce) returns (uint256) {
+    function proofOfWork(uint nonce) {
         bytes32 n = sha3(nonce, currentChallenge); // generate random hash based on input
         if (n > bytes32(difficulty)) revert();
 
@@ -113,7 +113,7 @@ contract MineableToken is Ownable {
 
         uint256 reward = calculateReward();
 
-        token.transferFrom(this, msg.sender, reward); // reward to winner grows over time
+        token.transfer(msg.sender, reward); // reward to winner grows over time
 
         difficulty = difficulty * 10 minutes / timeSinceLastProof + 1; // Adjusts the difficulty
 
@@ -121,8 +121,6 @@ contract MineableToken is Ownable {
         currentChallenge = sha3(nonce, currentChallenge, block.blockhash(block.number - 1)); // Save hash for next proof
 
         Mine(msg.sender, reward); // execute an event reflecting the change
-
-        return reward;
     }
 
 }
